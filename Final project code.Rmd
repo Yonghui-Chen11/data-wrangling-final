@@ -1,0 +1,127 @@
+---
+title: "Final Project"
+author: "Yonghui Chen"
+date: "2020/5/2"
+output: html_document
+---
+
+```{r message=FALSE, warning=FALSE}
+# Loading packages
+library(readr)
+library(choroplethr)
+library(choroplethrMaps)
+library(tidytext)
+library(gutenbergr)
+library(tidyr)
+library(ggplot2)
+library(rvest)
+library(gridExtra)
+library(tidyverse)
+```
+
+```{r}
+# Loading data from github
+coast_vs_waste <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-05-21/coastal-population-vs-mismanaged-plastic.csv")
+
+mismanaged_vs_gdp <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-05-21/per-capita-mismanaged-plastic-waste-vs-gdp-per-capita.csv")
+
+waste_vs_gdp <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-05-21/per-capita-plastic-waste-vs-gdp-per-capita.csv")
+
+data1 <- left_join(coast_vs_waste,mismanaged_vs_gdp)
+plastic_pollution <- left_join(data1,waste_vs_gdp)
+```
+
+
+```{r}
+#Loading data from my github account,download from “our world in data”
+global_plastics_production <- readr::read_csv("https://raw.githubusercontent.com/Yonghui-Chen11/data-wrangling-final/master/global-plastics-production.csv")
+global_plastic_fate <- readr::read_csv("https://raw.githubusercontent.com/Yonghui-Chen11/data-wrangling-final/master/global-plastic-fate.csv")
+coastal_population_vs_mismanaged_plastic <- readr::read_csv("https://raw.githubusercontent.com/Yonghui-Chen11/data-wrangling-final/master/coastal-population-vs-mismanaged-plastic.csv")
+inadequately_managed_plastic <- readr::read_csv("https://raw.githubusercontent.com/Yonghui-Chen11/data-wrangling-final/master/inadequately-managed-plastic.csv")
+per_capita_mismanaged_plastic_waste_vs_gdp_per_capita <- readr::read_csv("https://raw.githubusercontent.com/Yonghui-Chen11/data-wrangling-final/master/per-capita-mismanaged-plastic-waste-vs-gdp-per-capita.csv")
+per_capita_plastic_waste_vs_gdp_per_capita <- readr::read_csv("https://raw.githubusercontent.com/Yonghui-Chen11/data-wrangling-final/master/per-capita-plastic-waste-vs-gdp-per-capita.csv")
+plastic_waste_generation_total <- readr::read_csv("https://raw.githubusercontent.com/Yonghui-Chen11/data-wrangling-final/master/plastic-waste-generation-total.csv")
+plastic_waste_per_capita <- readr::read_csv("https://raw.githubusercontent.com/Yonghui-Chen11/data-wrangling-final/master/plastic-waste-per-capita.csv")
+share_mismanaged_waste_in_2025 <- readr::read_csv("https://raw.githubusercontent.com/Yonghui-Chen11/data-wrangling-final/master/share-mismanaged-waste-in-2025.csv")
+mismanaged_waste_global_total <- readr::read_csv("https://raw.githubusercontent.com/Yonghui-Chen11/data-wrangling-final/master/mismanaged-waste-global-total.csv")
+```
+
+
+```{r}
+#the increase of global plastic production(from 1950 through to 2015)
+plot1 <- ggplot(data = global_plastics_production,aes(x = Year, y = Global_plastics_production)) + geom_point()+geom_line()+labs(title = "Global plastics production")+theme(plot.title = element_text(hjust = 0.5))
+plot1
+```
+
+
+```{r}
+#the share of global plastic waste that is discarded, recycled or incinerated from 1980 through to 2015
+plot2 <- ggplot(data = global_plastic_fate,aes(x = Year, y = Estimated_historic_plastic_fate, col = Entity)) + geom_point()+geom_line()+labs(title = "Global plastic fate")+theme(plot.title = element_text(hjust = 0.5))
+plot2
+```
+
+
+```{r, fig.width=10, fig.height=10}
+#Something wrong with this paragraph.I plan create a map to describe which countries produce most plastic waste per capita.Also a map for mismanaged plastic waste by country.
+data(country.regions) 
+names_scraped <- c("Bahamas","Congo", "Democratic Republic of Congo","Tanzania","United States","Guinea-Bissau") 
+names0 <- c("the bahamas","republic of congo","democratic republic of the congo","united republic of tanzania","united states of america","guinea bissau")
+dictionary <- c(null = names0)
+names(dictionary) <- names_scraped
+
+plastic_waste_per_capita %>%
+  mutate(region = str_replace_all(Entity, dictionary)
+           %>% tolower()
+  ) %>% 
+    right_join(country.regions, by='region')
+
+
+ plastic_waste_per_capita %>%
+    mutate(value = as.numeric(gsub(",", "", Per_capita_plastic_waste))) %>%
+    replace_na(list(value = 0)) %>%
+    country_choropleth(title = "plastic_waste_per_capita", num_colors = 8) + 
+    theme(legend.position = "bottom")+scale_fill_brewer(type='seq', palette=3)
+```
+
+
+```{r}
+#Get the top 10 plastic waste countries
+plastic_waste_generation_total[order(plastic_waste_generation_total$Plastic_waste_generation,decreasing = T),]
+```
+
+
+```{r}
+#Get the top 10 inadequately managed plastic countries
+inadequately_managed_plastic[order(inadequately_managed_plastic$Share_of_plastic_inadequately_managed,decreasing = T),]
+```
+
+
+```{r}
+#Get the top 10 mismanaged waste countries
+mismanaged_waste_global_total[order(mismanaged_waste_global_total$Mismanaged_waste,decreasing = T),]
+```
+
+
+```{r}
+#correlation between GDP and plastic waste
+plot3 <- ggplot(data = per_capita_plastic_waste_vs_gdp_per_capita,aes(x = GDP_per_capita, y = Per_capita_plastic_waste)) + geom_point()+labs(title = "per_capita_plastic_waste_vs_gdp_per_capita")+theme(plot.title = element_text(hjust = 0.5))+coord_cartesian(xlim = c(0,100000),ylim = c(0,1))
+plot3
+```
+
+
+```{r}
+#the mismanaged per capita plastic waste generation rate versus GDP per capita
+plot4 <- ggplot(data = per_capita_mismanaged_plastic_waste_vs_gdp_per_capita,aes(x = GDP_per_capita, y = Mismanaged_plastic_waste_per_capita)) + geom_point()+labs(title = "per_capita_miamanaged_plastic_waste_vs_gdp_per_capita")+theme(plot.title = element_text(hjust = 0.5))+coord_cartesian(xlim = c(0,50000),ylim = c(0,0.15))
+plot4
+```
+
+
+```{r}
+#coastal population and mismanaged plastic
+plot5 <- ggplot(data = coastal_population_vs_mismanaged_plastic,aes(x = Coastal_population, y = Mismanaged_plastic_waste)) + geom_point()+labs(title = "coastal_population_vs_mismanaged_plastic")+theme(plot.title = element_text(hjust = 0.5))+coord_cartesian(xlim = c(0,15000000),ylim = c(0,300000))
+plot5
+```
+
+```{r}
+
+```
